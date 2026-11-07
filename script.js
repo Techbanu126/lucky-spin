@@ -119,35 +119,67 @@ function indexAtPointer(n) {
   return Math.min(n - 1, Math.floor(a / seg));
 }
 
+function spin() 
+let anim = null, rafId = 0, stopping = false;
+
+function setSpinBtn(text, enabled) {
+  const b = $('spinBtn');
+  b.textContent = text; b.disabled = !enabled; b.classList.toggle('stop', text === 'STOP');
+}
+
+// random winner + the distance (0..2π) the wheel must still turn to land inside that slice
+function planLanding(n, from) {
+  const seg = TAU / n, w = Math.floor(Math.random() * n);
+  const want = -Math.PI / 2 - (w + 0.15 + Math.random() * 0.7) * seg;
+  return (((want - from) % TAU) + TAU) % TAU;
+}
+
+function runAnim(list, start, total, dur) {
+  anim = { list, start, total, dur, t0: performance.now(), last: -1, v: 0 };
+  cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(frame);
+}
+
+function frame(now) {
+  const a = anim; if (!a) return;
+  const p = Math.min(1, (now - a.t0) / a.dur);
+  rot = a.start + a.total * (1 - Math.pow(1 - p, 3));          // fast start, slow ending
+  a.v = 3 * a.total / a.dur * Math.pow(1 - p, 2);              // current speed (radians per ms)
+  const idx = indexAtPointer(a.list.length);
+  if (idx !== a.last) { if (!spinAudioOK) tick(); a.last = idx; }
+  draw();
+  if (p < 1) rafId = requestAnimationFrame(frame);
+  else { anim = null; finish(a.list); }
+}
+
 function spin() {
   const list = active();
   if (spinning || !list.length) return;
   initAudio(); stopIntro(); startSpinAudio();
-  spinning = true; $('spinBtn').disabled = true; $('status').textContent = 'Good luck! 🍀';
+  spinning = true; stopping = false;
+  $('status').textContent = 'Good luck! 🍀';
   window.scrollTo(0, 0); document.body.classList.add('spinning');
-  const n = list.length, seg = TAU / n;
-  const w = Math.floor(Math.random() * n);                 // random winner
-  const want = -Math.PI / 2 - (w + 0.15 + Math.random() * 0.7) * seg; // land inside that slice
-  const start = rot;
-  const dur = SPIN_SECONDS * 1000, t0 = performance.now();
-  const total = (((want - start) % TAU) + TAU) % TAU + TAU * (SPIN_SECONDS * 0.7 + Math.floor(Math.random() * 3));
-  let lastIdx = -1;
+  setSpinBtn('STOP', true);
+  const total = planLanding(list.length, rot) + TAU * (SPIN_SECONDS * 0.7 + Math.floor(Math.random() * 3));
+  runAnim(list, rot, total, SPIN_SECONDS * 1000);
+}
 
-  (function frame(now) {
-    const p = Math.min(1, (now - t0) / dur);
-    rot = start + total * (1 - Math.pow(1 - p, 3));
-    const idx = indexAtPointer(n);
-    if (idx !== lastIdx) { if (!spinAudioOK) tick(); lastIdx = idx; }
-    draw();
-    p < 1 ? requestAnimationFrame(frame) : finish(list);
-  })(t0);
+// STOP button: keep the current speed, then slow down smoothly and stop on a (new) random friend
+function stopSpin() {
+  if (!spinning || stopping || !anim) return;
+  stopping = true; setSpinBtn('...', false);
+  const v = Math.max(anim.v, 0.0005);                          // radians per ms
+  let D = planLanding(anim.list.length, rot);
+  while (3 * D / v < 4000) D += TAU;                           // slow down for at least ~4 seconds
+  const T = Math.min(3 * D / v, 12000);
+  runAnim(anim.list, rot, D, T);
 }
 
 function finish(list) {
   const winner = list[indexAtPointer(list.length)];       // read from the pointer position
   stopSpinAudio();
   winner.done = true; save();
-  spinning = false;
+ spinning = false; stopping = false; setSpinBtn('SPIN', false);
   const srcs = [winner.sticker, winner.photo, avatarURL(winner.name)].filter(Boolean);
   const wp = $('winPhoto'); let k = 0;
   wp.onerror = () => { if (++k < srcs.length) wp.src = srcs[k]; };   // missing file -> next best picture
@@ -203,8 +235,7 @@ function render() {
   if (!friends.length) list.innerHTML = '<li class="empty">No friends yet. Add your first one!</li>';
   const left = active().length;
   $('count').textContent = friends.length ? `(${left} left)` : '';
-  $('spinBtn').disabled = spinning || left === 0;
-  $('status').textContent = !friends.length ? 'Add some friends to begin.'
+$('spinBtn').textContent = 'SPIN'; $('spinBtn').disabled = spinning || left === 0;  $('status').textContent = !friends.length ? 'Add some friends to begin.'
     : left === 0 ? '🎊 Everyone has received their gift! Happy Diwali! 🎊'
     : left === 1 && friends.length > 1 ? 'One last friend left!' : 'Press SPIN!';
   draw();
@@ -315,6 +346,6 @@ $('musicBtn').onclick = () => {
 };
 tryIntro();
 
-$('spinBtn').onclick = spin;
+$('spinBtn').onclick = () => (spinning ? stopSpin() : spin());
 addEventListener('resize', () => { if (confettiOn) { cc.width = innerWidth; cc.height = innerHeight; } });
 render();
