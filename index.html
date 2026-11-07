@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diwali Lucky Gift Spinner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Yatra+One&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="sparkles"></div>
+
+<header>
+  <h1>🪔 Diwali Lucky Gift Spinner 🪔</h1>
+  <p>Add your friends, spin the wheel, and see who wins a gift!</p>
+</header>
+
+<main>
+  <!-- WHEEL -->
+  <section class="wheel-area">
+    <div class="wheel-wrap" id="wheelWrap">
+      <div class="pointer"></div>
+      <canvas id="wheel" width="800" height="800"></canvas>
+      <button id="spinBtn" class="spin-btn">SPIN</button>
+    </div>
+    <p id="status" class="status"></p>
+  </section>
+
+  <!-- FRIENDS PANEL -->
+  <section class="panel">
+    <h2>Friends <span id="count"></span></h2>
+    <ul id="list"></ul>
+    <button id="resetBtn" class="btn ghost">🔄 Start Over (everyone back on the wheel)</button>
+  </section>
+</main>
+
+<div class="diyas"><span>🪔</span><span>🪔</span><span>🪔</span><span>🪔</span><span>🪔</span></div>
+
+<!-- WINNER POPUP -->
+<div id="modal" class="modal" hidden>
+  <div class="modal-box">
+    <img id="winPhoto" class="win-photo" alt="">
+    <h2 id="winName"></h2>
+    <p class="win-num" id="winNum"></p>
+    <p class="win-msg">🎉 Happy Diwali! 🎁</p>
+    <p>Congratulations! You are the Lucky Gift Winner!</p>
+    <button id="closeBtn" class="btn">Continue</button>
+  </div>
+</div>
+
+<button id="musicBtn" class="music-btn" title="Music on/off">🎵</button>
+<canvas id="confetti"></canvas>
+<script src="script.js"></script>
+</body>
+</html>
