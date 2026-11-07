@@ -119,7 +119,6 @@ function indexAtPointer(n) {
   return Math.min(n - 1, Math.floor(a / seg));
 }
 
-function spin() 
 let anim = null, rafId = 0, stopping = false;
 
 function setSpinBtn(text, enabled) {
@@ -179,7 +178,7 @@ function finish(list) {
   const winner = list[indexAtPointer(list.length)];       // read from the pointer position
   stopSpinAudio();
   winner.done = true; save();
- spinning = false; stopping = false; setSpinBtn('SPIN', false);
+  spinning = false; stopping = false; setSpinBtn('SPIN', false);
   const srcs = [winner.sticker, winner.photo, avatarURL(winner.name)].filter(Boolean);
   const wp = $('winPhoto'); let k = 0;
   wp.onerror = () => { if (++k < srcs.length) wp.src = srcs[k]; };   // missing file -> next best picture
@@ -235,7 +234,8 @@ function render() {
   if (!friends.length) list.innerHTML = '<li class="empty">No friends yet. Add your first one!</li>';
   const left = active().length;
   $('count').textContent = friends.length ? `(${left} left)` : '';
-$('spinBtn').textContent = 'SPIN'; $('spinBtn').disabled = spinning || left === 0;  $('status').textContent = !friends.length ? 'Add some friends to begin.'
+  $('spinBtn').textContent = 'SPIN'; $('spinBtn').disabled = spinning || left === 0;
+  $('status').textContent = !friends.length ? 'Add some friends to begin.'
     : left === 0 ? '🎊 Everyone has received their gift! Happy Diwali! 🎊'
     : left === 1 && friends.length > 1 ? 'One last friend left!' : 'Press SPIN!';
   draw();
@@ -328,20 +328,23 @@ intro.preload = 'auto';
 let introStarted = false, musicOn = true;
 const unlockEvents = ['pointerdown', 'keydown', 'touchstart'];
 function onFirstTouch(e) { if (e.target.closest && e.target.closest('#spinBtn')) return; tryIntro(); }
+let introBlocked = false;   // set when a spin starts, so the main audio can never come back
 function tryIntro() {
-  if (introStarted || !musicOn || spinning) return;
+  if (introStarted || !musicOn || spinning || introBlocked) return;
   intro.play().then(() => {
+    if (introBlocked) { intro.pause(); return; }   // spin started while it was still loading
     introStarted = true;
     unlockEvents.forEach(ev => removeEventListener(ev, onFirstTouch));
   }).catch(() => {});
 }
 function stopIntro() {
-  intro.pause(); introStarted = true;
+  introBlocked = true; introStarted = true;
+  intro.pause(); intro.currentTime = 0;
   unlockEvents.forEach(ev => removeEventListener(ev, onFirstTouch));
 }
 unlockEvents.forEach(ev => addEventListener(ev, onFirstTouch));
 $('musicBtn').onclick = () => {
-  if (intro.paused) { musicOn = true; introStarted = true; intro.play().catch(() => {}); $('musicBtn').textContent = '🎵'; }
+  if (intro.paused) { musicOn = true; introBlocked = false; introStarted = true; intro.play().catch(() => {}); $('musicBtn').textContent = '🎵'; }
   else { musicOn = false; intro.pause(); $('musicBtn').textContent = '🔇'; }
 };
 tryIntro();
